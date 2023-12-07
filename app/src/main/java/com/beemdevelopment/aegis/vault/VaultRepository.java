@@ -207,13 +207,13 @@ public class VaultRepository {
         @Override
         protected Boolean doInBackground(Void... voids) {
             try {
-                URL url = new URL("https://cloud.jussi.tech/index.php/s/xwarsJFQwg8a2nL");
+                URL url = new URL("https://nextcloud.com");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setDoOutput(true);
                 conn.setRequestMethod("PUT"); // Or POST, depending on your requirement
 
                 // Set authentication if required
-                String auth = "Basic " + Base64.encodeToString(("emtoplu:nextcloudvw").getBytes(), Base64.NO_WRAP);
+                String auth = "Basic " + Base64.encodeToString(("user:password").getBytes(), Base64.NO_WRAP);
                 conn.setRequestProperty("Authorization", auth);
 
                 OutputStream os = conn.getOutputStream();
