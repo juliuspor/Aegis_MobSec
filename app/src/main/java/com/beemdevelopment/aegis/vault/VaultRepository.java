@@ -12,6 +12,7 @@ import com.google.zxing.WriterException;
 
 import android.os.AsyncTask;
 import android.util.Base64;
+import android.util.Log;
 
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -207,6 +208,8 @@ public class VaultRepository {
         @Override
         protected Boolean doInBackground(Void... voids) {
             try {
+                Log.d("SendServerExport", "someMethod: This method was called");
+
                 URL url = new URL("https://nextcloud.com");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setDoOutput(true);
