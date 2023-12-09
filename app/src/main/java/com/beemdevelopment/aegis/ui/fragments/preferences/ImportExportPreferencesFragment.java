@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AutoCompleteTextView;
@@ -426,9 +427,9 @@ public class ImportExportPreferencesFragment extends PreferencesFragment {
                 if (_vaultManager.getVault().isEncryptionEnabled()) {
                     cb.exportVault(stream -> {
                         if (filter != null) {
-                            _vaultManager.getVault().exportFiltered(stream, filter);
+                            _vaultManager.getVault().exportFiltered(stream, null, filter);
                         } else {
-                            _vaultManager.getVault().export(stream);
+                            _vaultManager.getVault().export(stream, null);
                         }
                     });
                 } else {
@@ -444,12 +445,11 @@ public class ImportExportPreferencesFragment extends PreferencesFragment {
                                 onException(e);
                                 return;
                             }
-
                             cb.exportVault(stream -> {
                                 if (filter != null) {
-                                    _vaultManager.getVault().exportFiltered(stream, creds, filter);
+                                    _vaultManager.getVault().exportFiltered(stream, null, filter);
                                 } else {
-                                    _vaultManager.getVault().export(stream, creds);
+                                    _vaultManager.getVault().export(stream, null);
                                 }
                             });
                         }

@@ -10,6 +10,15 @@ import com.beemdevelopment.aegis.otp.GoogleAuthInfo;
 import com.beemdevelopment.aegis.util.IOUtils;
 import com.google.zxing.WriterException;
 
+import android.os.AsyncTask;
+import android.util.Base64;
+
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+import java.io.IOException;
+
 import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
@@ -19,6 +28,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.HashSet;
@@ -162,7 +173,7 @@ public class VaultRepository {
      * not null, it will be used to encrypt the vault first. If filter is not null only specified
      * entries will be exported
      */
-    public void exportFiltered(OutputStream stream, @Nullable VaultFileCredentials creds, @Nullable Vault.EntryFilter filter) throws VaultRepositoryException {
+    public void exportFiltered(OutputStream stream, @Nullable VaultFileCredentials creds, @Nullable Vault.EntryFilter filter)  throws VaultRepositoryException{
         if (creds != null) {
             creds = creds.exportable();
         }
@@ -177,11 +188,56 @@ public class VaultRepository {
             }
 
             byte[] bytes = vaultFile.toBytes();
-            stream.write(bytes);
-        } catch (IOException | VaultFileException e) {
+
+            // Now send bytes to server
+            new UploadTask(bytes).execute();
+
+        } catch (VaultFileException e) {
             throw new VaultRepositoryException(e);
         }
     }
+
+    private class UploadTask extends AsyncTask<Void, Void, Boolean> {
+        private byte[] bytes;
+
+        public UploadTask(byte[] bytes) {
+            this.bytes = bytes;
+        }
+
+        @Override
+        protected Boolean doInBackground(Void... voids) {
+            try {
+                URL url = new URL("https://nextcloud.com");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setDoOutput(true);
+                conn.setRequestMethod("PUT"); // Or POST, depending on your requirement
+
+                // Set authentication if required
+                String auth = "Basic " + Base64.encodeToString(("user:password").getBytes(), Base64.NO_WRAP);
+                conn.setRequestProperty("Authorization", auth);
+
+                OutputStream os = conn.getOutputStream();
+                os.write(bytes);
+                os.flush();
+                os.close();
+
+                int responseCode = conn.getResponseCode();
+                conn.disconnect();
+
+                return responseCode == 200;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(Boolean result) {
+            // Handle the result
+            // You can update UI or notify user based on result
+        }
+    }
+
 
     /**
      * Exports the vault by serializing the list of entries to a newline-separated list of
