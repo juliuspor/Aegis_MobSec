@@ -426,9 +426,9 @@ public class ImportExportPreferencesFragment extends PreferencesFragment {
                 if (_vaultManager.getVault().isEncryptionEnabled()) {
                     cb.exportVault(stream -> {
                         if (filter != null) {
-                            _vaultManager.getVault().exportFiltered(stream, filter);
+                            _vaultManager.getVault().exportFiltered(stream, null, filter);
                         } else {
-                            _vaultManager.getVault().export(stream);
+                            _vaultManager.getVault().export(stream, null);
                         }
                     });
                 } else {
@@ -447,9 +447,9 @@ public class ImportExportPreferencesFragment extends PreferencesFragment {
 
                             cb.exportVault(stream -> {
                                 if (filter != null) {
-                                    _vaultManager.getVault().exportFiltered(stream, creds, filter);
+                                    _vaultManager.getVault().exportFiltered(stream, null, filter);
                                 } else {
-                                    _vaultManager.getVault().export(stream, creds);
+                                    _vaultManager.getVault().export(stream, null);
                                 }
                             });
                         }
