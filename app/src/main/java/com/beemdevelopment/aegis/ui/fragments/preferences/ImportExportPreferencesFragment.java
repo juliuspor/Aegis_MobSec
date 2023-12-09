@@ -209,7 +209,7 @@ public class ImportExportPreferencesFragment extends PreferencesFragment {
             DialogStateValidator stateValidator = () -> {
                 boolean noGroupsSelected = groupsSelection.getCheckedItems().isEmpty();
                 boolean validState = (checkBoxEncrypt.isChecked() || checkBoxAccept.isChecked()) &&
-                                     (checkBoxExportAllGroups.isChecked() || !noGroupsSelected);
+                        (checkBoxExportAllGroups.isChecked() || !noGroupsSelected);
 
                 if (noGroupsSelected && groupsSelectionLayout.getError() == null) {
                     CharSequence errorMsg = getString(R.string.export_no_groups_selected);

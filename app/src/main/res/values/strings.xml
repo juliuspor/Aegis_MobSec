@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">Aegis</string>
+    <string name="app_name" translatable="false">Amalgis</string>
     <string name="app_name_full" translatable="false">Aegis Authenticator</string>
     <string name="org_name_full" translatable="false">Beem Development</string>
     <string name="action_settings">Settings</string>
