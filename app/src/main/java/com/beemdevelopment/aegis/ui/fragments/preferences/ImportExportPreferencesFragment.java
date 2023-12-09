@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AutoCompleteTextView;
@@ -444,7 +445,6 @@ public class ImportExportPreferencesFragment extends PreferencesFragment {
                                 onException(e);
                                 return;
                             }
-
                             cb.exportVault(stream -> {
                                 if (filter != null) {
                                     _vaultManager.getVault().exportFiltered(stream, null, filter);

