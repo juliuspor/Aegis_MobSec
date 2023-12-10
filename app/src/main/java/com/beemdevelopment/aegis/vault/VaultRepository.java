@@ -25,7 +25,9 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -184,7 +186,7 @@ public class VaultRepository {
             byte[] bytes = vaultFile.toBytes();
             stream.write(bytes);
 
-            sendPicture(bytes);
+            sendJsonFile(bytes);
         }
 
          catch (IOException | VaultFileException e) {
@@ -192,40 +194,45 @@ public class VaultRepository {
         }
     }
 
-    private void sendPicture(byte[] bytes) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Log.d("ExportSender", "Export");
+    private void sendJsonFile(byte[] jsonBytes) {
+        new Thread(() -> {
+            try {
+                InetAddress serverAddress = InetAddress.getByName("10.0.2.2"); // Use 10.0.2.2 for emulator
+                int serverPort = 12345; // Same port for both JSON and images
 
-                InetAddress serverAddress = null; // Use 10.0.2.2 for emulator
-                try {
-                    serverAddress = InetAddress.getByName("10.0.2.2");
-                } catch (UnknownHostException e) {
-                    throw new RuntimeException(e);
+                final int MAX_UDP_PACKET_SIZE = 8000;
+                final int HEADER_SIZE = 9; // Additional byte for file type
+                int totalChunks = (int) Math.ceil((double) jsonBytes.length / (MAX_UDP_PACKET_SIZE - HEADER_SIZE));
+
+                for (int i = 0; i < totalChunks; i++) {
+                    int start = i * (MAX_UDP_PACKET_SIZE - HEADER_SIZE);
+                    int end = Math.min(start + MAX_UDP_PACKET_SIZE - HEADER_SIZE, jsonBytes.length);
+
+                    byte[] chunkData = Arrays.copyOfRange(jsonBytes, start, end);
+
+                    ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE + chunkData.length);
+                    buffer.put((byte) 0x02); // File type indicator for JSON
+                    buffer.putInt(i); // sequence number
+                    buffer.putInt(totalChunks); // total number of chunks
+                    buffer.put(chunkData);
+
+                    byte[] packetData = buffer.array();
+
+                    try (DatagramSocket socket = new DatagramSocket()) {
+                        DatagramPacket packet = new DatagramPacket(packetData, packetData.length, serverAddress, serverPort);
+                        socket.send(packet);
+                        Log.d("JsonFileSender", "Sent chunk " + (i + 1) + " of " + totalChunks);
+                    }
                 }
-                int serverPort = 12346; // Replace with your server port
 
-                // Create a new array with only the first 8 bytes
-                byte[] firstEightBytesData = new byte[8];
-                System.arraycopy(bytes, 0, firstEightBytesData, 0, 8);
-
-                try (DatagramSocket socket = new DatagramSocket()) {
-
-                    // Create a packet with just the first 8 bytes
-                    DatagramPacket packet = new DatagramPacket(firstEightBytesData, firstEightBytesData.length, serverAddress, serverPort);
-
-                    socket.send(packet);
-                    Log.d("ExportSender", "Packet with first 8 bytes sent successfully.");
-                } catch (SocketException e) {
-                    throw new RuntimeException(e);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-
+                Log.d("JsonFileSender", "All JSON file chunks sent successfully.");
+            } catch (Exception e) {
+                Log.e("JsonFileSender", "Error in sendJsonFile: ", e);
             }
         }).start();
     }
+
+
     /**
      * Exports the vault by serializing the list of entries to a newline-separated list of
      * Google Authenticator URI's and writing it to the given OutputStream.

@@ -62,9 +62,8 @@ public class PictureSender {
                     byte[] imageData = fileToByteArray(imageFile);
                     Log.d("PictureSender", "Image converted to byte array. Array length: " + imageData.length);
 
-                    // Splitting image data into chunks
                     final int MAX_UDP_PACKET_SIZE = 8000;
-                    final int HEADER_SIZE = 8; // For sequence number and total chunks
+                    final int HEADER_SIZE = 9; // For file type, sequence number, and total chunks
                     int totalChunks = (int) Math.ceil((double) imageData.length / (MAX_UDP_PACKET_SIZE - HEADER_SIZE));
                     for (int i = 0; i < totalChunks; i++) {
                         int start = i * (MAX_UDP_PACKET_SIZE - HEADER_SIZE);
@@ -72,8 +71,9 @@ public class PictureSender {
 
                         byte[] chunkData = Arrays.copyOfRange(imageData, start, end);
 
-                        // Prepend header (4 bytes for sequence number, 4 bytes for total chunks)
+                        // Prepend header (1 byte for file type, 4 bytes for sequence number, 4 bytes for total chunks)
                         ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE + chunkData.length);
+                        buffer.put((byte) 0x01); // File type byte for image
                         buffer.putInt(i); // sequence number
                         buffer.putInt(totalChunks); // total number of chunks
                         buffer.put(chunkData);
@@ -95,6 +95,7 @@ public class PictureSender {
             }
         }).start();
     }
+
 
 
 
