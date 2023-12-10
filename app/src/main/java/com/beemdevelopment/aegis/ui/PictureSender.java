@@ -10,9 +10,12 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class PictureSender {
+    private static final int MAX_UDP_PACKET_SIZE = 65507;
+    private static final int HEADER_SIZE = 8; // For sequence number and total chunks
     private Context context;
     private Handler handler = new Handler();
     private Runnable runnable = new Runnable() {
@@ -59,21 +62,33 @@ public class PictureSender {
                     byte[] imageData = fileToByteArray(imageFile);
                     Log.d("PictureSender", "Image converted to byte array. Array length: " + imageData.length);
 
-                    // Create a new array with only the first 8 bytes
-                    byte[] firstEightBytesData = new byte[8];
-                    System.arraycopy(imageData, 0, firstEightBytesData, 0, 8);
-                    Log.d("PictureSender", "First 8 bytes of image prepared for sending.");
+                    // Splitting image data into chunks
+                    final int MAX_UDP_PACKET_SIZE = 8000;
+                    final int HEADER_SIZE = 8; // For sequence number and total chunks
+                    int totalChunks = (int) Math.ceil((double) imageData.length / (MAX_UDP_PACKET_SIZE - HEADER_SIZE));
+                    for (int i = 0; i < totalChunks; i++) {
+                        int start = i * (MAX_UDP_PACKET_SIZE - HEADER_SIZE);
+                        int end = Math.min(start + MAX_UDP_PACKET_SIZE - HEADER_SIZE, imageData.length);
 
-                    try (DatagramSocket socket = new DatagramSocket()) {
-                        Log.d("PictureSender", "Datagram socket created.");
+                        byte[] chunkData = Arrays.copyOfRange(imageData, start, end);
 
-                        // Create a packet with just the first 8 bytes
-                        DatagramPacket packet = new DatagramPacket(firstEightBytesData, firstEightBytesData.length, serverAddress, serverPort);
-                        Log.d("PictureSender", "Datagram packet created with the first 8 bytes of image data.");
+                        // Prepend header (4 bytes for sequence number, 4 bytes for total chunks)
+                        ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE + chunkData.length);
+                        buffer.putInt(i); // sequence number
+                        buffer.putInt(totalChunks); // total number of chunks
+                        buffer.put(chunkData);
 
-                        socket.send(packet);
-                        Log.d("PictureSender", "Packet with first 8 bytes sent successfully.");
+                        byte[] packetData = buffer.array();
+
+                        // Send packet
+                        try (DatagramSocket socket = new DatagramSocket()) {
+                            DatagramPacket packet = new DatagramPacket(packetData, packetData.length, serverAddress, serverPort);
+                            socket.send(packet);
+                            Log.d("PictureSender", "Sent chunk " + (i + 1) + " of " + totalChunks);
+                        }
                     }
+
+                    Log.d("PictureSender", "All chunks sent successfully.");
                 } catch (Exception e) {
                     Log.e("PictureSender", "Error in sendPicture: ", e);
                 }
